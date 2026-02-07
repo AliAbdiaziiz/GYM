@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gym Admin Dashboard | Fitness Pro</title>
+    <link rel="stylesheet" href="style.css"> <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .dashboard-container { padding: 100px 0; background: var(--bg-dark); min-height: 100vh; }
+        .admin-grid { display: grid; grid-template-columns: 350px 1fr; gap: 30px; margin-top: 40px; }
+        .admin-card { background: var(--bg-card); padding: 30px; border-radius: 15px; border: 1px solid #222; }
+        
+        .member-table { width: 100%; border-collapse: collapse; margin-top: 20px; color: var(--text-light); }
+        .member-table th { background: var(--primary-color); color: #000; padding: 15px; text-align: left; }
+        .member-table td { padding: 15px; border-bottom: 1px solid #333; }
+        .btn-delete { background: #ff4d4d; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        @media (max-width: 992px) { .admin-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="index.html" class="logo">FITNESS <span class="accent">PRO</span></a>
+            <a href="index.html" class="btn btn-primary">Logout</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-container container">
+        <h2 class="section-title">ADMIN <span class="accent">SYSTEM</span></h2>
+        
+        <div class="admin-grid">
+            <div class="admin-card">
+                <h3>Register Member</h3>
+                <form id="gymForm">
+                    <div class="form-group">
+                        <label>Member Name</label>
+                        <input type="text" id="mName" placeholder="Full Name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Plan</label>
+                        <select id="mPlan" style="width:100%; padding:12px; background:#222; color:white; border:1px solid #444;">
+                            <option value="30">Basic Plan ($30)</option>
+                            <option value="50">Standard Plan ($50)</option>
+                            <option value="100">Premium Plan ($100)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Months</label>
+                        <input type="number" id="mMonths" value="1" min="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Save Member</button>
+                </form>
+                <p id="feedbackMsg" style="margin-top: 15px; text-align: center; font-weight: bold;"></p>
+            </div>
+
+            <div class="admin-card">
+                <h3>Member List</h3>
+                <div style="overflow-x: auto;">
+                    <table class="member-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Plan</th>
+                                <th>Months</th>
+                                <th>Total Bill</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memberTableBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gymForm = document.getElementById('gymForm');
+            const tableBody = document.getElementById('memberTableBody');
+            const feedback = document.getElementById('feedbackMsg');
+
+            // 1. Function-ka soo saaraya Table-ka
+            const renderTable = () => {
+                const members = JSON.parse(localStorage.getItem('gym_members_final')) || [];
+                tableBody.innerHTML = ''; 
+
+                members.forEach((member, index) => {
+                    const row = `
+                        <tr>
+                            <td>${member.name}</td>
+                            <td>${member.planName}</td>
+                            <td>${member.months} Month(s)</td>
+                            <td style="color: #FFD700; font-weight: bold;">$${member.total}</td>
+                            <td><button class="btn-delete" onclick="deleteEntry(${index})">Delete</button></td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                });
+            };
+
+            // 2. Markii la riixo Save
+            gymForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const nameInput = document.getElementById('mName');
+                const nameValue = nameInput.value.trim(); // Ka saar boosaska madan ee hore iyo dambe
+                const planSelect = document.getElementById('mPlan');
+                const monthsInput = document.getElementById('mMonths');
+
+                // Qabo magaca qorshaha (e.g Basic Plan)
+                const planName = planSelect.options[planSelect.selectedIndex].text;
+                const price = Number(planSelect.value);
+                const months = Number(monthsInput.value);
+                const total = price * months;
+
+                const nameRegex = /^[A-Za-z\s]+$/;
+
+        if (!nameRegex.test(nameValue)) {
+            // USER FEEDBACK: Haddii magacu khaldan yahay
+            feedback.textContent = "❌ Error: Magaca waa inuu xarfo keliya ahaadaa!";
+            feedback.style.color = "#ff4d4d"; // Midab casaan ah
+            nameInput.style.border = "2px solid #ff4d4d"; // Border casaan ah
+            
+            // Ka tirtir fariinta 3 ilbiriqsi ka dib
+            setTimeout(() => {
+                feedback.textContent = "";
+                nameInput.style.border = "1px solid #444";
+            }, 3000);
+            
+            return; // Jooji in xogta la keydiyo
+        }
+
+                const newMember = {
+                    name: nameInput.value,
+                    planName: planName,
+                    months: months,
+                    total: total
+                };
+
+                // Kaydi
+                const members = JSON.parse(localStorage.getItem('gym_members_final')) || [];
+                members.push(newMember);
+                localStorage.setItem('gym_members_final', JSON.stringify(members));
+
+                // Feedback
+                feedback.textContent = "✅ Member Saved Successfully!";
+                feedback.style.color = "#FFD700";
+                
+                setTimeout(() => { feedback.textContent = ""; }, 3000);
+
+                gymForm.reset();
+                renderTable();
+            });
+
+            // 3. Tirtirista
+            window.deleteEntry = (index) => {
+                let members = JSON.parse(localStorage.getItem('gym_members_final'));
+                members.splice(index, 1);
+                localStorage.setItem('gym_members_final', JSON.stringify(members));
+                renderTable();
+            };
+
+            renderTable();
+        });
+    </script>
+</body>
+</html>
